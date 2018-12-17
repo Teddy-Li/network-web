@@ -132,12 +132,13 @@ def request_listener():
 		print("Client from IP address ", addr, " has submitted a request!")
 		for i in range(3):
 			data.append(conn.recv(1024))
-			print "data recved!"
+			print data[i]
 		assert(len(data) == RQST_LENGTH)
 		requested_filename = data[0]
 		client_ip = data[1]
-		client_port = data[2]
-		assert(client_ip == addr)
+		client_port = int(data[2])
+		print client_ip
+		print addr
 		print("requested_filename: ", requested_filename)
 		print("client_ip", client_ip)
 		print("client_port", client_port)

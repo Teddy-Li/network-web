@@ -2,6 +2,7 @@ import socket
 import time
 import bitstring
 import random
+import thread
 
 servefile = {}
 UDP_IP_ADDRESS = ""
@@ -20,7 +21,8 @@ RQST_LENGTH = 3
 # the SSRC is randomly chosen, don't know about its impact, 
 # seems like it would be fine as long as this code is unique.
 SSRC = 234567892
-
+SLOW_DOWN = False
+FINISHED = False
 
 
 # add a file to the files database
@@ -96,6 +98,9 @@ def file_sender(filename, client_ip, client_port):
 	cur_send = b''
 	pac_cnter = 0
 	for line in file_list:
+		if SLOW_DOWN == True:
+			time.sleep(5)
+			SLOW_DOWN = False
 		pac_cnter += 1
 		if pac_cnter % PACKETS_PER_MESSAGE == 0:
 			wrap_slices(cur_send)
@@ -104,6 +109,7 @@ def file_sender(filename, client_ip, client_port):
 			cur_send += line
 	send_socket.sendto(cur_send, (client_ip, client_port))
 	send_socket.close()
+	FINISHED = True
 
 
 
@@ -137,9 +143,17 @@ def request_listener():
 			print("requested_filename: ", requested_filename)
 			print("client_ip", client_ip)
 			print("client_port", client_port)
-			
-			file_sender(requested_filename, client_ip, client_port)
+			thread.start_new_thread(file_sender, (requested_filename, client_ip, client_port))
+			while FINISHED == False:
+				str = conn.recv(1024)
+				if str == "Slow down.":
+					SLOW_DOWN = True
+				elif str == "Finished.":
+					FINISHED = True
+
+			conn.send("File sent.")
 			print("File sent!")
+			FINISHED = False
 	rqst_socket.close()
 	return 
 

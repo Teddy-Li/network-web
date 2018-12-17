@@ -46,11 +46,9 @@ def reorder_slices(slices, unit_size):
 	print("Reordered slices length: ", len(new_slices))
 	return new_slices
 
-# initialize the sequence number with a random value within 16bits size
-sequence_counter = random.randrange(65536)
 
 # warp the slice with an RTP header
-def wrap_slices(content):
+def wrap_slices(content, sequence_counter):
 	cur_time = time.time()
 	cur_time *= 1000
 	cur_time = int(cur_time)
@@ -69,7 +67,6 @@ def wrap_slices(content):
 	res += (header_ints[1].to_bytes(4, 'big'))
 	res += (header_ints[2].to_bytes(4, 'big'))
 	res += content
-	sequence_counter += 1
 	return content
 
 
@@ -91,7 +88,7 @@ def slice_file(file):
 
 
 # performs the task as a UDP server
-def file_sender(filename, client_ip, client_port):
+def file_sender(filename, client_ip, client_port, sequence_counter):
 	file = servefile[filename]
 	send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	file_list = slice_file(file)
@@ -103,10 +100,11 @@ def file_sender(filename, client_ip, client_port):
 			SLOW_DOWN = False
 		pac_cnter += 1
 		if pac_cnter % PACKETS_PER_MESSAGE == 0:
-			wrap_slices(cur_send)
+			wrap_slices(cur_send, sequence_counter)
 			send_socket.sendto(cur_send, (client_ip, client_port))
 		else:
 			cur_send += line
+		sequence_counter += 1
 	send_socket.sendto(cur_send, (client_ip, client_port))
 	send_socket.close()
 	FINISHED = True
@@ -143,7 +141,9 @@ def request_listener():
 			print("requested_filename: ", requested_filename)
 			print("client_ip", client_ip)
 			print("client_port", client_port)
-			thread.start_new_thread(file_sender, (requested_filename, client_ip, client_port))
+			sequence_counter = random.randrange(65536)
+			conn.send(sequence_counter)
+			thread.start_new_thread(file_sender, (requested_filename, client_ip, client_port, sequence_counter))
 			while FINISHED == False:
 				str = conn.recv(1024)
 				if str == "Slow down.":

@@ -148,9 +148,6 @@ def request_listener():
 				str = conn.recv(1024)
 				if str == "Slow down.":
 					SLOW_DOWN = True
-				elif str == "Finished.":
-					FINISHED = True
-
 			conn.send("File sent.")
 			print("File sent!")
 			FINISHED = False

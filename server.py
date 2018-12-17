@@ -5,7 +5,7 @@ import random
 import thread
 
 servefile = {}
-UDP_IP_ADDRESS = ""
+UDP_IP_ADDRESS = "127.0.0.1"
 UDP_PORT_NUM = 2333
 TS_PACKET_LENGTH = 188
 # The length of one package is TS packet size 188, RTP header 12,
@@ -15,7 +15,7 @@ TS_PACKET_LENGTH = 188
 PACKETS_PER_MESSAGE = (1500 - 12 - 8 - 20 - 14 - 4) / 188
 
 MTU = 1500
-RQST_LISTEN_ADDRESS = ""
+RQST_LISTEN_ADDRESS = "127.0.0.1"
 RQST_LISTEN_PORT = 9876
 RQST_LENGTH = 3
 # the SSRC is randomly chosen, don't know about its impact, 
@@ -27,7 +27,7 @@ FINISHED = False
 
 # add a file to the files database
 def addFile(file_path, name):
-	file = open("file_path", "rb")
+	file = open(file_path, "rb")
 	servefile[name] = file
 
 # reorder the slices so that loss of one packet wouldn't make too much damage
@@ -124,38 +124,39 @@ def clean_up():
 def request_listener():
 	rqst_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	rqst_socket.bind((RQST_LISTEN_ADDRESS, RQST_LISTEN_PORT))
-	rqst_socket.listen()
+	rqst_socket.listen(1)
 	while True:
 		print("Waiting for connection......")
 		conn, addr = rqst_socket.accept()
-		with conn:
-			data = []
-			print("Client from IP address ", addr, " has submitted a request!")
-			while True:
-				data.append(conn.recv(1024))
-			assert(len(data) == RQST_LENGTH)
-			requested_filename = data[0]
-			client_ip = data[1]
-			client_port = data[2]
-			assert(client_ip == addr)
-			print("requested_filename: ", requested_filename)
-			print("client_ip", client_ip)
-			print("client_port", client_port)
-			sequence_counter = random.randrange(65536)
-			conn.send("%d" % sequence_counter)
-			time.sleep(1)
-			thread.start_new_thread(file_sender, (requested_filename, client_ip, client_port, sequence_counter))
-			while FINISHED == False:
-				str = conn.recv(1024)
-				if str == "Slow down.":
-					SLOW_DOWN = True
-			conn.send("File sent.")
-			print("File sent!")
-			FINISHED = False
+		data = []
+		print("Client from IP address ", addr, " has submitted a request!")
+		for i in range(3):
+			data.append(conn.recv(1024))
+			print "data recved!"
+		assert(len(data) == RQST_LENGTH)
+		requested_filename = data[0]
+		client_ip = data[1]
+		client_port = data[2]
+		assert(client_ip == addr)
+		print("requested_filename: ", requested_filename)
+		print("client_ip", client_ip)
+		print("client_port", client_port)
+		sequence_counter = random.randrange(65536)
+		conn.send("%d" % sequence_counter)
+		time.sleep(1)
+		thread.start_new_thread(file_sender, (requested_filename, client_ip, client_port, sequence_counter))
+		while FINISHED == False:
+			str = conn.recv(1024)
+			if str == "Slow down.":
+				SLOW_DOWN = True
+		conn.send("File sent.")
+		print("File sent!")
+		FINISHED = False
+		conn.close()
 	rqst_socket.close()
 	return 
 
-def main(args):
+def main():
 	addFile("./the_death_of_stalin.ts", "The Death of Stalin")
 
 

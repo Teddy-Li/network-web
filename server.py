@@ -143,6 +143,7 @@ def request_listener():
 			print("client_port", client_port)
 			sequence_counter = random.randrange(65536)
 			conn.send(sequence_counter)
+			time.sleep(1)
 			thread.start_new_thread(file_sender, (requested_filename, client_ip, client_port, sequence_counter))
 			while FINISHED == False:
 				str = conn.recv(1024)
